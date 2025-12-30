@@ -18,11 +18,18 @@ class SolidRainModel:
         Returns:
             Retention factor (0-1)
         """
-        # BUG: Incorrect handling of high humidity - factor can exceed 1.0
-        # When humidity > 80%, retention should saturate, but current formula
-        # incorrectly increases linearly.
-        factor = (humidity / 100.0) * (1.0 - temperature / 100.0)
-        return factor
+        # FIXED: Ensure factor stays within realistic bounds and saturates at high humidity
+        # Temperature factor: 1 - temperature/100, clamped to non-negative
+        temp_factor = max(0.0, 1.0 - temperature / 100.0)
+        humidity_factor = humidity / 100.0
+        factor = humidity_factor * temp_factor
+        
+        # Saturation for high humidity: cap at 0.95 when humidity > 80%
+        if humidity > 80:
+            factor = min(factor, 0.95)
+        
+        # Final clamp to [0, 1]
+        return max(0.0, min(1.0, factor))
     
     def calculate_absorption_rate(self, soil_moisture, polymer_amount):
         """
